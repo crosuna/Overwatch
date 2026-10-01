@@ -1,0 +1,17 @@
+# per-machine settings and generated data for the menu
+datatool-menu/config.json
+datatool-menu/cache/
+
+# python
+__pycache__/
+*.pyc
+
+# build output never lives here (build.ps1 uses %LOCALAPPDATA%\datatool-build), but just in case
+datatool/build/
+datatool/out/
+
+# editor and OS noise
+.vs/
+.vscode/
+Thumbs.db
+desktop.ini

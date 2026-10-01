@@ -1,0 +1,27 @@
+diff --git a/DataTool/Program.cs b/DataTool/Program.cs
+index f540395..9e2ec3d 100644
+--- a/DataTool/Program.cs
++++ b/DataTool/Program.cs
+@@ -252,6 +252,8 @@ public static class Program {
+     }
+ 
+     public static void InitStorage(bool online = false) { // turnin offline off again, can cause perf issues with bundle hack
++        TACTLib.Core.Product.Tank.ManifestCryptoHandler.AttemptFallbackManifests = Flags.FallbackManifests;
++
+         // Attempt to load language via registry or from Steam, if they were already provided via flags then this won't do anything
+         if (!Flags.NoLanguageRegistry) {
+             TryFetchLocaleFromSteamInstall(); // fetch from steam first
+diff --git a/DataTool/ToolFlags.cs b/DataTool/ToolFlags.cs
+index 66802b6..b919d2c 100644
+--- a/DataTool/ToolFlags.cs
++++ b/DataTool/ToolFlags.cs
+@@ -70,6 +70,9 @@ public class ToolFlags : IToolFlags {
+     [CLIFlag(Default = false, Flag = "no-parallel", Help = "No parallel processing", Hidden = true, Parser = new[] {"DataTool.Flag.Converter", "CLIFlagBoolean"})]
+     public bool NoParallelProcessing;
+ 
++    [CLIFlag(Default = false, Flag = "fallback-manifests", Help = "Use the closest older manifest procedure when the game build is not supported yet", Parser = new[] {"DataTool.Flag.Converter", "CLIFlagBoolean"})]
++    public bool FallbackManifests;
++
+     public override bool Validate() => true;
+     
+     public string GetManifestRegion() {

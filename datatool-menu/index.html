@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DataTool Menu</title>
+<style>
+  :root {
+    --bg: #15171c; --panel: #1e2128; --panel2: #262a33; --line: #343a46;
+    --text: #e6e8ee; --muted: #9aa3b5; --accent: #f99e1a; --accent2: #3f8cff;
+    --ok: #4cc38a; --bad: #e5484d; --warn: #f5a524;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 Segoe UI, system-ui, sans-serif; }
+  button, input, select { font: inherit; color: inherit; }
+  button { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+  button:hover { border-color: var(--muted); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #111; font-weight: 600; }
+  button.small { padding: 3px 8px; font-size: 12px; }
+  button.active { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+  button:disabled { opacity: .45; cursor: default; }
+  input[type=text], select { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100%; }
+  .layout { display: grid; grid-template-columns: 230px 1fr 380px; height: 100vh; }
+  .col { overflow: auto; padding: 14px; border-right: 1px solid var(--line); }
+  .col:last-child { border-right: 0; }
+  h1 { font-size: 16px; margin: 0 0 10px; }
+  h2 { font-size: 14px; margin: 18px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .muted { color: var(--muted); }
+  .hero-list button { display: block; width: 100%; text-align: left; margin: 2px 0; background: transparent; border-color: transparent; }
+  .hero-list button.active { background: var(--panel2); border-color: var(--line); color: var(--text); }
+  .hero-list .count { float: right; color: var(--muted); font-size: 12px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 10px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+  .card header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .card header b { font-weight: 600; }
+  .modes { display: flex; gap: 4px; }
+  .picker { margin-top: 8px; border-top: 1px solid var(--line); padding-top: 8px; }
+  .picker .tools { display: flex; gap: 6px; margin-bottom: 6px; }
+  .items { max-height: 260px; overflow: auto; }
+  .item { display: flex; gap: 8px; align-items: center; padding: 2px 0; }
+  .item.blocked { color: var(--muted); }
+  .badge { font-size: 11px; padding: 1px 6px; border-radius: 10px; background: var(--panel2); color: var(--muted); white-space: nowrap; }
+  .badge.Legendary { color: var(--accent); } .badge.Mythic { color: #d58cff; } .badge.Epic { color: #b58cff; } .badge.Rare { color: #6eb0ff; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { font-size: 12px; padding: 3px 8px; border-radius: 10px; background: var(--panel2); border: 1px solid var(--line); cursor: pointer; }
+  .chip.low { border-color: var(--bad); }
+  pre { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px; white-space: pre-wrap; word-break: break-all; font-size: 12px; max-height: 160px; overflow: auto; }
+  .job { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; cursor: pointer; }
+  .job.active { border-color: var(--accent2); }
+  .job .status { float: right; font-size: 12px; font-weight: 600; }
+  .status.queued { color: var(--muted); } .status.running { color: var(--accent2); } .status.done { color: var(--ok); }
+  .status.failed { color: var(--bad); } .status.cancelled { color: var(--warn); }
+  .problem { color: var(--bad); font-size: 12px; }
+  #log { height: calc(100vh - 330px); font-family: Consolas, monospace; font-size: 12px; max-height: none; }
+  .notice { padding: 8px 10px; border-radius: 6px; margin: 8px 0; background: var(--panel2); border-left: 3px solid var(--warn); }
+  .notice.error { border-left-color: var(--bad); }
+  label.check { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; height: auto; } .col { border-right: 0; border-bottom: 1px solid var(--line); } #log { height: 300px; } }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="col">
+    <h1>Heroes</h1>
+    <input type="text" id="heroSearch" placeholder="Search heroes">
+    <div class="hero-list" id="heroList"></div>
+    <h2>Unlock list</h2>
+    <div class="muted" id="cacheInfo">Loading</div>
+    <button class="small" id="refreshBtn" style="margin-top:6px">Rebuild from game files</button>
+  </aside>
+
+  <main class="col">
+    <div id="noHero" class="muted">Pick a hero on the left.</div>
+    <div id="heroPanel" style="display:none">
+      <div class="row" style="justify-content:space-between">
+        <h1 id="heroName" style="margin:0"></h1>
+        <div>
+          <button class="small" id="allBtn">Select everything</button>
+          <button class="small" id="noneBtn">Clear</button>
+        </div>
+      </div>
+      <div class="chips" id="heroChips"></div>
+
+      <h2>Cosmetics (extract-unlocks)</h2>
+      <div class="cards" id="cards"></div>
+
+      <h2>Also extract</h2>
+      <div class="row">
+        <label class="check"><input type="checkbox" id="optVoice"> Hero voice lines (every line the hero says in game, as .ogg)</label>
+      </div>
+      <div class="row">
+        <label class="check"><input type="checkbox" id="optConvo"> Conversations the hero takes part in</label>
+      </div>
+
+      <h2>Output</h2>
+      <div class="row">
+        <input type="text" id="outPath" style="flex:1" placeholder="E:\OW_Extracts\Hero">
+        <button class="small" id="openBtn">Open folder</button>
+      </div>
+      <div class="chips" id="drives"></div>
+      <div class="row">
+        <label class="check">Textures <select id="optTex" style="width:auto"></select></label>
+        <label class="check"><input type="checkbox" id="optRefpose" checked> Skeleton ref poses</label>
+        <label class="check"><input type="checkbox" id="optLods"> All model LODs</label>
+        <label class="check"><input type="checkbox" id="optRawSound"> Raw sound (no .ogg conversion)</label>
+        <label class="check"><input type="checkbox" id="optSubs"> Subtitles next to voice lines</label>
+      </div>
+
+      <h2>Commands that will run</h2>
+      <div id="dropped"></div>
+      <pre id="preview">Nothing selected.</pre>
+      <div class="row">
+        <button class="primary" id="queueBtn">Add to queue</button>
+        <span class="muted" id="queueMsg"></span>
+      </div>
+    </div>
+  </main>
+
+  <section class="col">
+    <h1>Queue</h1>
+    <div id="jobs" class="muted">No jobs yet.</div>
+    <h2>Log</h2>
+    <div class="row">
+      <button class="small" id="cancelBtn" disabled>Cancel</button>
+      <button class="small" id="removeBtn" disabled>Remove</button>
+      <label class="check"><input type="checkbox" id="followLog" checked> Follow</label>
+      <span class="muted" id="logInfo"></span>
+    </div>
+    <pre id="log"></pre>
+  </section>
+</div>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const state = {
+    config: null, heroes: [], hero: null, heroData: null,
+    select: {},            // query name -> "*" | Set of names | undefined
+    pickOpen: {},          // query name -> bool
+    filters: {},           // query name -> search text
+    jobs: [], activeJob: null, logFrom: 0, previewTimer: null,
+    polling: false, queueing: false,
+  };
+
+  async function api(path, body) {
+    const res = await fetch(path, body === undefined ? {} : {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    let data = null;
+    try { data = await res.json(); } catch (e) { data = null; }
+    if (!res.ok) {
+      const err = new Error((data && (data.error || data.message || (data.errors && data.errors.join(' ')))) || `HTTP ${res.status}`);
+      err.status = res.status;
+      err.data = data;
+      throw err;
+    }
+    return data;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  // ------------------------------------------------------------ heroes
+
+  function renderHeroes() {
+    const q = $('heroSearch').value.trim().toLowerCase();
+    const list = $('heroList');
+    list.innerHTML = '';
+    state.heroes.filter((h) => !q || h.name.toLowerCase().includes(q)).forEach((h) => {
+      const btn = document.createElement('button');
+      const skins = h.counts.Skin || 0;
+      btn.innerHTML = `${escapeHtml(h.name)} <span class="count">${skins} skins</span>`;
+      btn.className = state.hero === h.name ? 'active' : '';
+      btn.onclick = () => selectHero(h.name);
+      list.appendChild(btn);
+    });
+  }
+
+  function defaultOut(name) {
+    return state.config.default_out.replace(/\\+$/, '') + '\\' + name.replace(/[\\/:*?"<>|]/g, '_');
+  }
+
+  async function selectHero(name, keepSelection) {
+    const data = await api('/api/hero?name=' + encodeURIComponent(name));
+    state.hero = data.name;
+    state.heroData = data;
+    if (!keepSelection) {
+      state.select = {};
+      state.pickOpen = {};
+      state.filters = {};
+      $('outPath').value = defaultOut(data.name);
+    } else {
+      // drop picks that no longer exist after a rebuild
+      state.config.types.forEach((t) => {
+        const sel = state.select[t.query];
+        if (sel instanceof Set) {
+          const names = new Set((data.types[t.type] || []).map((it) => it.name));
+          [...sel].forEach((n) => { if (!names.has(n)) sel.delete(n); });
+        }
+      });
+    }
+    $('noHero').style.display = 'none';
+    $('heroPanel').style.display = '';
+    $('heroName').textContent = data.name;
+    renderHeroes();
+    renderHero();
+  }
+
+  function renderHero() {
+    const types = state.heroData.types;
+    const chips = $('heroChips');
+    chips.innerHTML = '';
+    Object.keys(types).sort().forEach((t) => {
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.textContent = `${types[t].length} ${t}`;
+      if (state.config.info_types[t]) chip.title = state.config.info_types[t];
+      chips.appendChild(chip);
+    });
+    renderCards();
+    schedulePreview();
+  }
+
+  function pickLabel(t) {
+    const sel = state.select[t.query];
+    return 'Pick' + (sel instanceof Set && sel.size ? ' (' + sel.size + ')' : '');
+  }
+
+  function renderCards() {
+    const cards = $('cards');
+    cards.innerHTML = '';
+    state.config.types.forEach((t) => {
+      const items = state.heroData.types[t.type] || [];
+      const sel = state.select[t.query];
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.query = t.query;
+      const mode = sel === '*' ? 'all' : (sel instanceof Set ? 'pick' : 'none');
+      card.innerHTML = `
+        <header>
+          <b>${escapeHtml(t.label)} <span class="muted">${items.length}</span></b>
+          <div class="modes">
+            <button class="small ${mode === 'all' ? 'active' : ''}" data-mode="all" ${items.length ? '' : 'disabled'}>All</button>
+            <button class="small ${mode === 'pick' ? 'active' : ''}" data-mode="pick" ${items.length ? '' : 'disabled'}>${pickLabel(t)}</button>
+            <button class="small ${mode === 'none' ? 'active' : ''}" data-mode="none">None</button>
+          </div>
+        </header>`;
+      card.querySelectorAll('button[data-mode]').forEach((b) => {
+        b.onclick = () => {
+          const m = b.dataset.mode;
+          if (m === 'all') state.select[t.query] = '*';
+          else if (m === 'none') delete state.select[t.query];
+          else if (!(state.select[t.query] instanceof Set)) state.select[t.query] = new Set();
+          state.pickOpen[t.query] = m === 'pick';
+          renderCards();
+          schedulePreview();
+        };
+      });
+      if (mode === 'pick' && state.pickOpen[t.query]) card.appendChild(renderPicker(t, items));
+      cards.appendChild(card);
+    });
+  }
+
+  function updatePickCount(t) {
+    const card = [...document.querySelectorAll('.card')].find((c) => c.dataset.query === t.query);
+    const btn = card && card.querySelector('button[data-mode=pick]');
+    if (btn) btn.textContent = pickLabel(t);
+  }
+
+  function renderPicker(t, items) {
+    const wrap = document.createElement('div');
+    wrap.className = 'picker';
+    wrap.innerHTML = `
+      <div class="tools">
+        <input type="text" placeholder="Filter by name, event or team" value="${escapeHtml(state.filters[t.query] || '')}">
+        <button class="small" data-act="add">Tick shown</button>
+        <button class="small" data-act="clear">Untick all</button>
+      </div>
+      <div class="items"></div>`;
+    const input = wrap.querySelector('input');
+    const box = wrap.querySelector('.items');
+    const visibleItems = () => {
+      const filter = (state.filters[t.query] || '').toLowerCase();
+      return items.filter((it) => !filter || it.name.toLowerCase().includes(filter) || (it.event || '').toLowerCase().includes(filter) || (it.team || '').toLowerCase().includes(filter));
+    };
+    const renderItems = () => {
+      const sel = state.select[t.query];
+      box.innerHTML = '';
+      const visible = visibleItems();
+      visible.forEach((it) => {
+        const row = document.createElement('label');
+        row.className = 'item' + (it.blocked ? ' blocked' : '');
+        const meta = [it.event, it.team].filter(Boolean).join(' / ');
+        row.innerHTML = `<input type="checkbox" ${sel.has(it.name) ? 'checked' : ''} ${it.blocked ? 'disabled' : ''}>
+          <span style="flex:1">${escapeHtml(it.name)}${it.count > 1 ? ` <span class="muted">x${it.count}</span>` : ''}${it.blocked ? ' <span class="muted">(only with All)</span>' : ''}</span>
+          ${meta ? `<span class="badge">${escapeHtml(meta)}</span>` : ''}
+          ${it.rarity && it.rarity !== 'None' ? `<span class="badge ${escapeHtml(it.rarity)}">${escapeHtml(it.rarity)}</span>` : ''}`;
+        if (it.blocked) row.title = it.blocked;
+        else if (it.count > 1) row.title = `${it.count} unlocks share this name; DataTool extracts all of them together.`;
+        row.querySelector('input').onchange = (e) => { if (e.target.checked) sel.add(it.name); else sel.delete(it.name); updatePickCount(t); schedulePreview(); };
+        box.appendChild(row);
+      });
+      if (!visible.length) box.innerHTML = '<div class="muted">No matches.</div>';
+    };
+    // only the item list is re-rendered while typing, so the filter box keeps its focus and caret
+    input.oninput = () => { state.filters[t.query] = input.value; renderItems(); };
+    wrap.querySelector('[data-act=add]').onclick = () => { const sel = state.select[t.query]; visibleItems().forEach((it) => { if (!it.blocked) sel.add(it.name); }); renderItems(); updatePickCount(t); schedulePreview(); };
+    wrap.querySelector('[data-act=clear]').onclick = () => { state.select[t.query].clear(); renderItems(); updatePickCount(t); schedulePreview(); };
+    renderItems();
+    return wrap;
+  }
+
+  function currentRequest() {
+    const select = {};
+    Object.entries(state.select).forEach(([q, v]) => { if (v === '*') select[q] = '*'; else if (v instanceof Set && v.size) select[q] = [...v]; });
+    return {
+      hero: state.hero, out: $('outPath').value, select,
+      hero_voice: $('optVoice').checked, conversations: $('optConvo').checked,
+      flags: { refpose: $('optRefpose').checked, all_lods: $('optLods').checked, textures: $('optTex').value, raw_sound: $('optRawSound').checked, subtitles: $('optSubs').checked },
+    };
+  }
+
+  function schedulePreview() {
+    clearTimeout(state.previewTimer);
+    state.previewTimer = setTimeout(refreshPreview, 150);
+  }
+
+  async function refreshPreview() {
+    if (!state.hero) return;
+    let plan;
+    try { plan = await api('/api/preview', currentRequest()); } catch (err) { $('preview').textContent = err.message; $('queueBtn').disabled = true; return; }
+    const pre = $('preview');
+    const dropped = $('dropped');
+    dropped.innerHTML = '';
+    if (plan.dropped.length) dropped.innerHTML = `<div class="notice">Not included (choose All for that category to get them): ${escapeHtml(plan.dropped.join('; '))}</div>`;
+    if (plan.errors.length) {
+      pre.textContent = plan.errors.join('\n');
+      $('queueBtn').disabled = true;
+    } else {
+      pre.textContent = plan.display.join('\n\n');
+      $('queueBtn').disabled = state.queueing;
+    }
+  }
+
+  // ------------------------------------------------------------ jobs
+
+  async function queueJob() {
+    if (state.queueing) return;
+    state.queueing = true;
+    $('queueBtn').disabled = true;
+    $('queueMsg').textContent = '';
+    try {
+      const res = await api('/api/jobs', currentRequest());
+      $('queueMsg').textContent = `Queued job ${res.job.id} for ${res.job.hero}.`;
+      showJob(res.job.id);
+      await pollJobs();
+    } catch (err) {
+      $('queueMsg').textContent = err.message;
+    } finally {
+      state.queueing = false;
+      schedulePreview();
+    }
+  }
+
+  function showJob(id) {
+    state.activeJob = id;
+    state.logFrom = 0;
+    $('log').textContent = '';
+    $('logInfo').textContent = '';
+  }
+
+  function fmtTime(sec) {
+    if (sec == null) return '';
+    sec = Math.round(sec);
+    const m = Math.floor(sec / 60), s = sec % 60;
+    return m ? `${m}m ${s}s` : `${s}s`;
+  }
+
+  function renderJobs() {
+    const box = $('jobs');
+    if (!state.jobs.length) { box.className = 'muted'; box.textContent = 'No jobs yet.'; }
+    else {
+      box.className = '';
+      box.innerHTML = '';
+      const now = Date.now() / 1000;
+      state.jobs.forEach((j) => {
+        const div = document.createElement('div');
+        div.className = 'job' + (j.id === state.activeJob ? ' active' : '');
+        const elapsed = j.started ? fmtTime((j.finished || now) - j.started) : '';
+        const step = j.status === 'running' ? `${j.steps[j.step]} (${j.step + 1}/${j.steps.length})` : j.steps.join(', ');
+        div.innerHTML = `<span class="status ${j.status}">${j.status}${elapsed ? ' ' + elapsed : ''}</span>
+          <b>${j.id}. ${escapeHtml(j.hero)}</b><br>
+          <span class="muted">${escapeHtml(step)}</span><br>
+          ${j.problem ? `<span class="problem">${escapeHtml(j.problem)}</span><br>` : ''}
+          <span class="muted" style="font-size:12px">${escapeHtml(j.out)}</span>`;
+        div.onclick = () => { showJob(j.id); renderJobs(); pollLog(); };
+        box.appendChild(div);
+      });
+    }
+    const active = state.jobs.find((j) => j.id === state.activeJob);
+    $('cancelBtn').disabled = !active || !(active.status === 'queued' || active.status === 'running');
+    $('removeBtn').disabled = !active || active.status === 'queued' || active.status === 'running';
+  }
+
+  async function pollJobs() {
+    if (state.polling) return;
+    state.polling = true;
+    try {
+      state.jobs = await api('/api/jobs');
+      if (state.activeJob != null && !state.jobs.some((j) => j.id === state.activeJob)) state.activeJob = null;
+      if (state.activeJob == null && state.jobs.length) showJob(state.jobs[state.jobs.length - 1].id);
+      renderJobs();
+      await pollLog();
+    } catch (err) {
+      $('logInfo').textContent = 'Server not reachable: ' + err.message;
+    } finally {
+      state.polling = false;
+    }
+  }
+
+  async function pollLog() {
+    if (state.activeJob == null) return;
+    const id = state.activeJob;
+    let data;
+    try { data = await api(`/api/jobs/${id}/log?from=${state.logFrom}`); }
+    catch (err) { if (err.status === 404) { state.activeJob = null; } return; }
+    if (id !== state.activeJob) return;  // the user switched jobs while this request was in flight
+    const log = $('log');
+    if (data.from > state.logFrom && state.logFrom > 0) log.textContent += `[... ${data.from - state.logFrom} earlier lines are only in the log file]\n`;
+    if (data.lines.length) {
+      log.textContent += data.lines.join('\n') + '\n';
+      if ($('followLog').checked) log.scrollTop = log.scrollHeight;
+    }
+    state.logFrom = data.total;
+    $('logInfo').textContent = `${data.total} lines`;
+  }
+
+  // ------------------------------------------------------------ setup
+
+  function renderDrives() {
+    const box = $('drives');
+    box.innerHTML = '';
+    state.config.drives.forEach((d) => {
+      const chip = document.createElement('span');
+      chip.className = 'chip' + (d.free_gb < 20 ? ' low' : '');
+      chip.textContent = `${d.letter}: ${d.free_gb} GB free of ${d.total_gb}`;
+      chip.title = 'Click to move the output folder to this drive';
+      chip.onclick = () => { $('outPath').value = d.letter + ':' + $('outPath').value.replace(/^[A-Za-z]:/, ''); schedulePreview(); };
+      box.appendChild(chip);
+    });
+  }
+
+  function renderCacheInfo() {
+    const c = state.config.cache || {};
+    $('cacheInfo').textContent = c.generated ? `Build ${c.build}, read ${c.generated}` : 'No build info';
+  }
+
+  async function init() {
+    state.config = await api('/api/config');
+    state.config.textures.forEach((t) => { const o = document.createElement('option'); o.value = t; o.textContent = t; $('optTex').appendChild(o); });
+    renderDrives();
+    renderCacheInfo();
+    state.heroes = await api('/api/heroes');
+    renderHeroes();
+    $('heroSearch').oninput = renderHeroes;
+    $('allBtn').onclick = () => {
+      state.config.types.forEach((t) => { if ((state.heroData.types[t.type] || []).length) state.select[t.query] = '*'; });
+      $('optVoice').checked = true; $('optConvo').checked = true;
+      renderCards(); schedulePreview();
+    };
+    $('noneBtn').onclick = () => { state.select = {}; $('optVoice').checked = false; $('optConvo').checked = false; renderCards(); schedulePreview(); };
+    ['optVoice', 'optConvo', 'optRefpose', 'optLods', 'optTex', 'optRawSound', 'optSubs'].forEach((id) => { $(id).onchange = schedulePreview; });
+    $('outPath').oninput = schedulePreview;
+    $('queueBtn').onclick = queueJob;
+    $('openBtn').onclick = async () => {
+      try { await api('/api/open', { path: $('outPath').value }); $('queueMsg').textContent = ''; }
+      catch (err) { $('queueMsg').textContent = err.message; }
+    };
+    $('cancelBtn').onclick = async () => {
+      if (state.activeJob == null) return;
+      try { await api(`/api/jobs/${state.activeJob}/cancel`, {}); } catch (err) { $('logInfo').textContent = err.message; }
+      await pollJobs();
+    };
+    $('removeBtn').onclick = async () => {
+      if (state.activeJob == null) return;
+      try { await api(`/api/jobs/${state.activeJob}/remove`, {}); state.activeJob = null; $('log').textContent = ''; }
+      catch (err) { $('logInfo').textContent = err.message; }
+      await pollJobs();
+    };
+    $('refreshBtn').onclick = async () => {
+      $('refreshBtn').disabled = true;
+      $('cacheInfo').textContent = 'Running DataTool list-unlocks...';
+      try {
+        const res = await api('/api/refresh', {});
+        $('cacheInfo').textContent = res.message;
+        state.config = await api('/api/config');
+        renderCacheInfo();
+        state.heroes = res.heroes || state.heroes;
+        renderHeroes();
+        if (state.hero) await selectHero(state.hero, true);
+      } catch (err) {
+        $('cacheInfo').textContent = 'Rebuild failed: ' + err.message;
+      }
+      $('refreshBtn').disabled = false;
+    };
+    await pollJobs();
+    setInterval(pollJobs, 1500);
+  }
+
+  init().catch((err) => { document.body.innerHTML = '<div class="notice error">Could not start: ' + escapeHtml(err.message) + '</div>'; });
+})();
+</script>
+</body>
+</html>
