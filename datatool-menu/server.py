@@ -723,6 +723,12 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json({"error": "not found"}, 404)
 
 
+class MenuServer(ThreadingHTTPServer):
+    # http.server turns on SO_REUSEADDR, which on Windows lets a second menu bind the same port
+    # silently and split the requests between the two. Fail loudly instead.
+    allow_reuse_address = False
+
+
 def main():
     if not os.path.exists(CONFIG["datatool"]):
         print(f"DataTool not found at {CONFIG['datatool']}. Edit {CONFIG_PATH}.")
@@ -733,9 +739,13 @@ def main():
         print(message)
         if not ok:
             sys.exit(1)
-    threading.Thread(target=worker, daemon=True).start()
     port = int(CONFIG.get("port") or DEFAULTS["port"])
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    try:
+        server = MenuServer(("127.0.0.1", port), Handler)
+    except OSError as exc:
+        print(f"Port {port} is already in use ({exc.strerror}). Close the other menu, or set \"port\" in {CONFIG_PATH}.")
+        sys.exit(1)
+    threading.Thread(target=worker, daemon=True).start()
     url = f"http://127.0.0.1:{port}/"
     print(f"DataTool menu running at {url}  (Ctrl+C or close this window to stop; running extractions stop with it)")
     if "--no-browser" not in sys.argv:
