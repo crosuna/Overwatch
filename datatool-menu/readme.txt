@@ -32,6 +32,8 @@ Notes
 -----
 - A few item names contain , | = ( ) " or *. DataTool's command parser cannot take those one at a
   time, so they are greyed out; choose All for that category to include them.
+- All includes esports team unlocks (OWL, World Cup, OWCS). DataTool skips those for a plain "*",
+  so the menu sends type=(leagueTeam=*) instead.
 - Common-rarity weapon skins (the "DEFAULT" entry) are greyed out because DataTool skips them.
 - Unlocks that share a name (for example the two "Overwatch League White" skins) appear once with
   an "x2" marker; DataTool extracts all of them together.

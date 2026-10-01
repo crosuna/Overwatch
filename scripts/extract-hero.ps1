@@ -5,8 +5,11 @@
 .DESCRIPTION
     Runs, in order, with a log per step under <OutRoot>\<Hero>\_logs:
       list-unlocks (JSON and text), extract-hero-voice, extract-conversations,
-      extract-unlocks "<Hero>|*=*" --extract-refpose
-    Skins take about a minute each; a hero with 150 skins runs for roughly 40-60 minutes.
+      extract-unlocks "<Hero>|*=(leagueTeam=*)" --extract-refpose
+    "(leagueTeam=*)" matters: DataTool's default is leagueTeam=none, so a plain "*=*" silently
+    skips every esports team skin, spray and icon (OWL, World Cup, OWCS).
+    Skins take about a minute each; an older hero with 140-160 skins (about half of them
+    esports skins) runs for roughly 2 to 3 hours.
 
 .EXAMPLE
     .\extract-hero.ps1 Genji
@@ -44,7 +47,7 @@ if (-not $SkipVoice) {
     Run "extract-conversations" @("extract-conversations", $out, $Hero)
 }
 if (-not $SkipUnlocks) {
-    Run "extract-unlocks" @("extract-unlocks", $out, "$Hero|*=*", "--extract-refpose")
+    Run "extract-unlocks" @("extract-unlocks", $out, "$Hero|*=(leagueTeam=*)", "--extract-refpose")
 }
 Add-Content $status "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] ALL DONE"
 Write-Host "Finished. Logs: $logs"

@@ -414,7 +414,9 @@ def build_commands(body):
         if not value:
             continue
         if value == "*":
-            parts.append(f"{qname}=*")
+            # DataTool tags every cosmetic with leagueTeam=none by default, so a bare "*" skips esports
+            # team unlocks (OWL, World Cup, OWCS). The explicit tag value "*" matches every team and none.
+            parts.append(f"{qname}=(leagueTeam=*)")
             continue
         if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
             errors.append(f"Bad selection for {label}.")

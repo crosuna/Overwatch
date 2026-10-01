@@ -59,7 +59,7 @@ If upstream has already released support, build their current code instead and m
 ## Extracting a whole hero
 
 ```powershell
-.\scripts\extract-hero.ps1 Genji -OutRoot E:\OW_Extracts      # voice, conversations, every cosmetic (about an hour)
+.\scripts\extract-hero.ps1 Genji -OutRoot E:\OW_Extracts      # voice, conversations, every cosmetic incl. esports (2-3 hours)
 .\scripts\extract-shared.ps1 -OutRoot E:\OW_Extracts           # abilities, perks, icons, lore for all heroes (a few minutes)
 python .\scripts\copy-shared.py Genji --root E:\OW_Extracts    # copies Genji's share of that into E:\OW_Extracts\Genji\Shared
 python .\scripts\coverage.py Genji --root E:\OW_Extracts       # compares the unlock list with what landed on disk

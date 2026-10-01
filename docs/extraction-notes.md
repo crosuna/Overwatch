@@ -48,7 +48,11 @@ the common-rarity DEFAULT weapon skin.
 - DataTool exits with code 0 even when a query matched nothing or the command was rejected; the
   menu and `extract-hero.ps1` logs have to be read for "Found nothing matching your query" and
   "The tool cannot interpret your command".
-- Names containing `, | = ( ) "` cannot be passed to DataTool one at a time; use `type=*`.
+- `type=*` is not "everything": DataTool tags each cosmetic with `leagueTeam=none` by default, so
+  `skin=*` or `*=*` silently skips esports team unlocks (OWL, World Cup, OWCS; about half of an older
+  hero's skins). Use `type=(leagueTeam=*)`, which the menu's All and `extract-hero.ps1` now send.
+  The 2026-10-01 Doomfist and Genji extracts are complete: the missing esports skins were fetched by name.
+- Names containing `, | = ( ) "` cannot be passed to DataTool one at a time; use `type=(leagueTeam=*)`.
 - Hero lore images in the intel database are keyed by GUID only, so `copy-shared.py` copies lore
   text that mentions the hero but cannot pick out the images.
 - Models import into Blender with the io_scene_owm add-on (.owmdl / .owmat / .owanimclip).
